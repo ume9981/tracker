@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>荷物追跡 TRACKER</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --border: #242424;
+    --accent: #e8ff5a;
+    --text: #f0f0f0;
+    --muted: #444;
+    --dim: #1e1e1e;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Noto Sans JP',sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:52px 20px 80px;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:10;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.011) 2px,rgba(255,255,255,.011) 4px);
+  }
+  .container { width:100%; max-width:560px; }
+
+  /* Header */
+  header { margin-bottom:44px; }
+  .eyebrow {
+    font-family:'DM Mono',monospace; font-size:10px;
+    letter-spacing:.22em; color:var(--muted); text-transform:uppercase; margin-bottom:10px;
+  }
+  h1 {
+    font-family:'DM Mono',monospace;
+    font-size:clamp(32px,8vw,50px);
+    font-weight:500; line-height:1; letter-spacing:-.02em;
+  }
+  h1 em { font-style:normal; color:var(--accent); }
+  .sub { margin-top:12px; font-size:13px; color:var(--muted); font-weight:300; line-height:1.7; }
+
+  /* Input */
+  .input-wrap { position:relative; margin-bottom:32px; }
+  #trackingInput {
+    width:100%; background:var(--surface);
+    border:1.5px solid var(--border); border-radius:4px;
+    color:var(--text); font-family:'DM Mono',monospace;
+    font-size:clamp(18px,4.5vw,24px); letter-spacing:.08em;
+    padding:20px 24px;
+    outline:none; transition:border-color .2s;
+    caret-color:var(--accent); -webkit-appearance:none;
+  }
+  #trackingInput::placeholder { color:#222; font-size:14px; letter-spacing:.04em; }
+  #trackingInput:focus { border-color:var(--accent); }
+
+  /* Status bar */
+  .status-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px; min-height:18px;
+  }
+  .status-text {
+    font-family:'DM Mono',monospace; font-size:10px;
+    letter-spacing:.15em; color:var(--muted); text-transform:uppercase;
+    transition:color .3s;
+  }
+  .status-text.active { color:var(--accent); }
+  .match-count {
+    font-family:'DM Mono',monospace; font-size:10px;
+    letter-spacing:.1em; color:var(--muted);
+  }
+
+  /* Group */
+  .group { margin-bottom:10px; }
+  .group-title {
+    font-family:'DM Mono',monospace; font-size:9px;
+    letter-spacing:.18em; color:#2e2e2e; text-transform:uppercase;
+    padding-bottom:8px; border-bottom:1px solid #1a1a1a;
+    margin-bottom:6px;
+    transition:color .3s;
+  }
+  .group.has-match .group-title { color:#3a3a3a; }
+
+  /* Carrier row */
+  .carrier-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:13px 16px; border-radius:3px;
+    border:1.5px solid transparent;
+    margin-bottom:4px;
+    transition: background .25s, border-color .25s, opacity .25s, transform .2s;
+    opacity:.28;
+    background: transparent;
+    cursor:default;
+    user-select:none;
+  }
+
+  /* Partial match — brightens up */
+  .carrier-row.partial {
+    opacity:.7;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  /* Full match — fully lit, clickable */
+  .carrier-row.match {
+    opacity:1;
+    background: #181f04;
+    border-color: var(--accent);
+    cursor:pointer;
+    transform: translateX(3px);
+  }
+  .carrier-row.match:hover {
+    background: #1e2a05;
+  }
+  .carrier-row.match:hover .cr-arrow { opacity:1; transform:translateX(3px); }
+
+  .cr-left { display:flex; align-items:center; gap:13px; }
+  .cr-icon { font-size:18px; width:28px; text-align:center; flex-shrink:0; }
+  .cr-info { display:flex; flex-direction:column; gap:2px; }
+  .cr-name {
+    font-size:14px; font-weight:700;
+    color:#555;
+    transition:color .25s;
+  }
+  .carrier-row.partial .cr-name { color:#888; }
+  .carrier-row.match .cr-name { color:var(--text); }
+
+  .cr-desc {
+    font-family:'DM Mono',monospace; font-size:10px; color:#333;
+    transition:color .25s;
+  }
+  .carrier-row.partial .cr-desc { color:#444; }
+  .carrier-row.match .cr-desc { color:#888; }
+
+  .cr-right { display:flex; align-items:center; gap:10px; }
+
+  /* Progress bar */
+  .cr-bar {
+    width:48px; height:2px;
+    background:#1e1e1e; border-radius:1px; overflow:hidden;
+    flex-shrink:0;
+  }
+  .cr-bar-fill {
+    height:100%; width:0%; border-radius:1px;
+    background:var(--accent);
+    transition:width .3s ease, background .3s;
+  }
+  .carrier-row.match .cr-bar-fill { background:var(--accent); }
+
+  .cr-arrow {
+    font-family:'DM Mono',monospace; font-size:14px;
+    color:var(--accent); opacity:0;
+    transition:opacity .2s, transform .2s;
+  }
+
+  /* Scan line effect on match */
+  .carrier-row.match::before {
+    content:'';
+    position:absolute; left:0; top:0; right:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    animation:scan .6s ease forwards;
+    opacity:0;
+  }
+  .carrier-row { position:relative; }
+  @keyframes scan {
+    0%   { opacity:0; left:-100%; right:100%; }
+    50%  { opacity:.6; }
+    100% { opacity:0; left:100%; right:-100%; }
+  }
+
+  footer {
+    margin-top:48px; font-family:'DM Mono',monospace;
+    font-size:10px; color:#222; letter-spacing:.1em; text-align:center;
+  }
+
+  @media (max-width:420px) {
+    body { padding:30px 14px 60px; }
+    #trackingInput { padding:17px 18px; }
+    .cr-bar { width:32px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="eyebrow">Universal Package Tracker</div>
+    <h1>TRACK<em>.</em></h1>
+    <p class="sub">追跡番号を入力。どのキャリアでもそのまま追跡できます。</p>
+  </header>
+
+  <div class="input-wrap">
+    <input type="text" id="trackingInput"
+      placeholder="追跡番号を入力..."
+      autocomplete="off" spellcheck="false"
+      maxlength="50" inputmode="text">
+  </div>
+
+  <div class="status-bar">
+    <span class="status-text" id="statusText">キャリアを選択</span>
+    <span class="match-count" id="matchCount"></span>
+  </div>
+
+  <div id="carrierList"></div>
+
+  <footer>各キャリアの公式追跡ページへリダイレクトします</footer>
+</div>
+
+<script>
+// ── Carrier definitions ──
+// Each carrier has:
+//   stages: array of regexes from "starts to match" → "fully matched"
+//   norm:   normalizer
+//   url:    tracking URL builder
+const CARRIERS = [
+  {
+    id:'yamato', icon:'🐱', name:'ヤマト運輸', desc:'クロネコヤマト', domestic:true,
+    // 12 digits (hyphen ok) — show partial from 4 digits
+    stages:[/^\d{1,3}$/, /^\d{4,7}-?\d{0,4}$/, /^\d{4,8}-?\d{4}-?\d{0,4}$/, /^\d{4}-?\d{4}-?\d{4}$/],
+    full:/^\d{4}-?\d{4}-?\d{4}$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://jizen.kuronekoyamato.co.jp/jizen/servlet/crjz.b.NQ0010?id=${n}`
+  },
+  {
+    id:'sagawa', icon:'🚚', name:'佐川急便', desc:'飛脚宅配便', domestic:true,
+    stages:[/^\d{1,5}$/, /^\d{6,9}$/, /^\d{10,11}$/, /^\d{12}$/],
+    full:/^\d{12}$/,
+    test:n=>!n.startsWith('00'),
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://k2k.sagawa-exp.co.jp/p/web/okurijosearch.do?okurijoNo=${n}`
+  },
+  {
+    id:'yuupack', icon:'〒', name:'ゆうパック', desc:'日本郵便・書留・国際', domestic:true,
+    stages:[/^0$/, /^00\d{0,4}$/, /^00\d{5,8}$/, /^00\d{9,10}$/],
+    full:/^00\d{10}$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://trackings.post.japanpost.jp/services/srv/search/?requestNo1=${n}&locale=ja`
+  },
+  {
+    id:'japanpost', icon:'✈️', name:'日本郵便（国際）', desc:'書留・EMS・国際小包', domestic:true,
+    stages:[/^[A-Z]$/i, /^[A-Z]{2}\d{0,4}$/i, /^[A-Z]{2}\d{5,8}$/i, /^[A-Z]{2}\d{9}[A-Z]{0,2}$/i],
+    full:/^[A-Z]{2}\d{9}[A-Z]{2}$/i,
+    norm:s=>s.replace(/[-\s]/g,'').toUpperCase(),
+    url:n=>`https://trackings.post.japanpost.jp/services/srv/search/?requestNo1=${n}&locale=ja`
+  },
+  {
+    id:'seino', icon:'🦘', name:'西濃運輸', desc:'カンガルー便', domestic:true,
+    stages:[/^\d{1,4}$/, /^\d{5,7}$/, /^\d{8,10}$/, /^\d{11}$/],
+    full:/^\d{11}$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://track.seino.co.jp/kamotsu/jyutaku.html?GNPNO1=${n}`
+  },
+  {
+    id:'fukuyama', icon:'🚛', name:'福山通運', desc:'フクツー', domestic:true,
+    stages:[/^\d{1,4}$/, /^\d{5,7}$/, /^\d{8,10}$/, /^\d{11}$/],
+    full:/^\d{11}$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://corp.fukutsu.co.jp/situation/tracking_no_input?nyu_no=${n}`
+  },
+  {
+    id:'fedex', icon:'📦', name:'FedEx', desc:'国際・国内エクスプレス', domestic:false,
+    stages:[/^\d{1,5}$/, /^\d{6,9}$/, /^\d{10,14}$/, /^(\d{12}|\d{15}|\d{20})$/],
+    full:/^(\d{12}|\d{15}|\d{20})$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://www.fedex.com/fedextrack/?trknbr=${n}`
+  },
+  {
+    id:'ups', icon:'🟤', name:'UPS', desc:'United Parcel Service', domestic:false,
+    stages:[/^1$/i, /^1Z/i, /^1Z[0-9A-Z]{1,8}$/i, /^1Z[0-9A-Z]{9,16}$/i],
+    full:/^1Z[0-9A-Z]{16}$/i,
+    norm:s=>s.replace(/[-\s]/g,'').toUpperCase(),
+    url:n=>`https://www.ups.com/track?tracknum=${n}`
+  },
+  {
+    id:'dhl', icon:'🟡', name:'DHL', desc:'国際エクスプレス', domestic:false,
+    stages:[/^\d{1,3}$/, /^\d{4,6}$/, /^\d{7,9}$/, /^\d{10}$/],
+    full:/^\d{10}$/,
+    norm:s=>s.replace(/[-\s]/g,''),
+    url:n=>`https://www.dhl.com/jp-ja/home/tracking.html?tracking-id=${n}`
+  },
+  {
+    id:'usps', icon:'🦅', name:'USPS', desc:'United States Postal Service', domestic:false,
+    stages:[/^\d{1,8}$/, /^\d{9,14}$/, /^\d{15,19}$/, /^(9[2-5]\d{18,20}|\d{20,22})$/],
+    full:/^(9[2-5]\d{18,20}|\d{20,22}|[A-Z]{2}\d{9}US)$/i,
+    norm:s=>s.replace(/[-\s]/g,'').toUpperCase(),
+    url:n=>`https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`
+  },
+  {
+    id:'amazon', icon:'📬', name:'Amazon Logistics', desc:'Amazon配送', domestic:false,
+    stages:[/^[TtDd]$/, /^(TB|TBA|TBM|D\d{0,4})/i, /^(TBA\d{1,8}|TBM\d{1,5}|D\d{5,10})/i, /^(TBA\d{9,12}|TBM\d{6,9}|D\d{11,14})/i],
+    full:/^(TBA\d{12}|TBM\d{9}|D\d{13,14})$/i,
+    norm:s=>s.replace(/[-\s]/g,'').toUpperCase(),
+    url:n=>`https://track.amazon.co.jp/tracking/${n}`
+  },
+];
+
+// ── Build DOM (flat list) ──
+const list = document.getElementById('carrierList');
+
+CARRIERS.forEach(c => {
+  const row = document.createElement('div');
+  row.className = 'carrier-row';
+  row.dataset.id = c.id;
+  row.innerHTML = `
+    <div class="cr-left">
+      <span class="cr-icon">${c.icon}</span>
+      <div class="cr-info">
+        <span class="cr-name">${c.name}</span>
+        <span class="cr-desc">${c.desc}</span>
+      </div>
+    </div>
+    <div class="cr-right">
+      <div class="cr-bar"><div class="cr-bar-fill" style="width:0%"></div></div>
+      <span class="cr-arrow">→</span>
+    </div>
+  `;
+  list.appendChild(row);
+});
+
+// ── Logic ──
+const inp        = document.getElementById('trackingInput');
+const statusText = document.getElementById('statusText');
+const matchCount = document.getElementById('matchCount');
+
+function getProgress(c, val) {
+  const n = c.norm(val);
+  if (!n) return 0;
+  if (c.full.test(n) && (!c.test || c.test(n))) return 1;
+  let depth = 0;
+  c.stages.forEach((re, i) => { if (re.test(n)) depth = i + 1; });
+  return depth > 0 ? (depth / c.stages.length) * 0.85 : 0;
+}
+
+function update() {
+  const val = inp.value.trim();
+  const rows = [...document.querySelectorAll('.carrier-row')];
+  let fullMatches = 0;
+  let anyPartial = 0;
+
+  rows.forEach(row => {
+    const c = CARRIERS.find(x => x.id === row.dataset.id);
+    const progress = getProgress(c, val);
+    const fill = row.querySelector('.cr-bar-fill');
+
+    row.classList.remove('match','partial');
+    row.onclick = null;
+
+    if (!val) { fill.style.width = '0%'; return; }
+
+    fill.style.width = (progress * 100) + '%';
+
+    if (progress === 1) {
+      row.classList.add('match');
+      fullMatches++;
+      const n = c.norm(val);
+      row.onclick = () => window.open(c.url(n), '_blank', 'noopener,noreferrer');
+    } else if (progress > 0) {
+      row.classList.add('partial');
+      anyPartial++;
+    }
+  });
+
+  // Sort: match → partial → rest (cross-group)
+  const matched = rows.filter(r => r.classList.contains('match'));
+  const partial = rows.filter(r => r.classList.contains('partial'));
+  const rest    = rows.filter(r => !r.classList.contains('match') && !r.classList.contains('partial'));
+  [...matched, ...partial, ...rest].forEach(r => list.appendChild(r));
+
+  // Status
+  if (!val) {
+    statusText.textContent = 'キャリアを選択';
+    statusText.classList.remove('active');
+    matchCount.textContent = '';
+  } else if (fullMatches > 0) {
+    statusText.textContent = fullMatches === 1 ? 'キャリアを特定' : `${fullMatches}件一致 — クリックして追跡`;
+    statusText.classList.add('active');
+    matchCount.textContent = `${fullMatches} MATCH`;
+  } else if (anyPartial > 0) {
+    statusText.textContent = 'スキャン中...';
+    statusText.classList.remove('active');
+    matchCount.textContent = `${anyPartial} PARTIAL`;
+  } else {
+    statusText.textContent = '一致なし';
+    statusText.classList.remove('active');
+    matchCount.textContent = '';
+  }
+}
+
+inp.addEventListener('input', update);
+inp.addEventListener('paste', () => { setTimeout(() => { inp.value = inp.value.trim(); update(); }, 0); });
+update();
+</script>
+</body>
+</html>
