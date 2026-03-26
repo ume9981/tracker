@@ -219,23 +219,23 @@ const CARRIERS = [
   {
     id:'yamato', icon:'🐱', name:'ヤマト運輸', desc:'クロネコヤマト', domestic:true,
     // 12 digits (hyphen ok) — show partial from 4 digits
-    stages:[/^\d{1,3}$/, /^\d{4,7}-?\d{0,4}$/, /^\d{4,8}-?\d{4}-?\d{0,4}$/, /^\d{4}-?\d{4}-?\d{4}$/],
-    full:/^\d{4}-?\d{4}-?\d{4}$/,
+    stages:[/^\d{1,3}$/, /^\d{4,7}$/, /^\d{8,10}$/, /^\d{11,12}$/],
+    full:/^\d{11,12}$/,
     norm:s=>s.replace(/[-\s]/g,''),
     url:n=>`https://jizen.kuronekoyamato.co.jp/jizen/servlet/crjz.b.NQ0010?id=${n}`
   },
   {
     id:'sagawa', icon:'🚚', name:'佐川急便', desc:'飛脚宅配便', domestic:true,
-    stages:[/^\d{1,5}$/, /^\d{6,9}$/, /^\d{10,11}$/, /^\d{12}$/],
-    full:/^\d{12}$/,
+    stages:[/^\d{1,4}$/, /^\d{5,7}$/, /^\d{8,9}$/, /^\d{10}|\d{12}$/],
+    full:/^(\d{10}|\d{12})$/,
     test:n=>!n.startsWith('00'),
     norm:s=>s.replace(/[-\s]/g,''),
     url:n=>`https://k2k.sagawa-exp.co.jp/p/web/okurijosearch.do?okurijoNo=${n}`
   },
   {
     id:'yuupack', icon:'〒', name:'ゆうパック', desc:'日本郵便・書留・国際', domestic:true,
-    stages:[/^0$/, /^00\d{0,4}$/, /^00\d{5,8}$/, /^00\d{9,10}$/],
-    full:/^00\d{10}$/,
+    stages:[/^\d{1,3}$/, /^\d{4,6}$/, /^\d{7,9}$/, /^\d{10,11}$/],
+    full:/^\d{11}$/,
     norm:s=>s.replace(/[-\s]/g,''),
     url:n=>`https://trackings.post.japanpost.jp/services/srv/search/?requestNo1=${n}&locale=ja`
   },
@@ -248,15 +248,15 @@ const CARRIERS = [
   },
   {
     id:'seino', icon:'🦘', name:'西濃運輸', desc:'カンガルー便', domestic:true,
-    stages:[/^\d{1,4}$/, /^\d{5,7}$/, /^\d{8,10}$/, /^\d{11}$/],
-    full:/^\d{11}$/,
+    stages:[/^\d{1,3}$/, /^\d{4,6}$/, /^\d{7,9}$/, /^\d{10}$/],
+    full:/^\d{10}$/,
     norm:s=>s.replace(/[-\s]/g,''),
     url:n=>`https://track.seino.co.jp/kamotsu/jyutaku.html?GNPNO1=${n}`
   },
   {
     id:'fukuyama', icon:'🚛', name:'福山通運', desc:'フクツー', domestic:true,
-    stages:[/^\d{1,4}$/, /^\d{5,7}$/, /^\d{8,10}$/, /^\d{11}$/],
-    full:/^\d{11}$/,
+    stages:[/^\d{1,3}$/, /^\d{4,6}$/, /^\d{7,9}$/, /^\d{10,11}$/],
+    full:/^\d{10,11}$/,
     norm:s=>s.replace(/[-\s]/g,''),
     url:n=>`https://corp.fukutsu.co.jp/situation/tracking_no_input?nyu_no=${n}`
   },
