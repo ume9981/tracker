@@ -240,7 +240,7 @@ const CARRIERS = [
     url:n=>`https://trackings.post.japanpost.jp/services/srv/search/?requestNo1=${n}&search=%E8%BF%BD%E8%B7%A1%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88&locale=ja`
   },
   {
-    id:'japanpost', icon:'✈️', name:'日本郵便（国際）', desc:'書留・EMS・国際小包', domestic:true,
+    id:'japanpost', icon:'✈️', name:'日本郵便（国際郵便）', desc:'EMS・国際書留・国際小包', domestic:true,
     stages:[/^[A-Z]$/i, /^[A-Z]{2}\d{0,4}$/i, /^[A-Z]{2}\d{5,8}$/i, /^[A-Z]{2}\d{9}[A-Z]{0,2}$/i],
     full:/^[A-Z]{2}\d{9}[A-Z]{2}$/i,
     norm:s=>s.replace(/[-\s]/g,'').toUpperCase(),
